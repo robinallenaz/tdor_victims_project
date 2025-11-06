@@ -1,0 +1,36 @@
+:root{
+  --bg:#000;
+  --fg:#fff;
+  --gap:8px;
+  --cell:180px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
+}
+.header{padding:8px 8px 0}
+.flyer{max-width:620px;width:100%;height:auto;display:block;margin:0 auto;border-radius:6px}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(var(--cell),1fr));
+  gap:var(--gap);
+  padding:var(--gap);
+  align-items:start;
+}
+.grid img{
+  width:100%;
+  height:var(--cell);
+  object-fit:cover;
+  border-radius:4px;
+  background:#111;
+}
+.footer{
+  opacity:.8;
+  padding:12px;
+  text-align:center;
+  font-size:.9rem;
+}

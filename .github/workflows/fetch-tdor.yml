@@ -1,0 +1,31 @@
+name: Fetch TDoR data
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # daily at 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch reports JSON
+        env:
+          API_KEY: ${{ secrets.TDOR_API_KEY }}
+          FROM: '2024-01-01'
+          TO: '2024-12-31'
+          COUNTRY: ''
+          FILTER: ''
+        run: |
+          mkdir -p data
+          curl -sS "https://tdor.translivesmatter.info/api/v1/reports?key=${API_KEY}&from=${FROM}&to=${TO}&country=${COUNTRY}&filter=${FILTER}" -o data/reports.json
+
+      - name: Derive photos.json
+        run: |
+          node -e "const fs=require('fs'); const p='data/reports.json'; const d=JSON.parse(fs.readFileSync(p,'utf8')); const arr=Array.isArray(d)?d:[]; const images=[...new Set(arr.map(r=>r.image_url||r.photo||r.image).filter(Boolean))]; fs.writeFileSync('data/photos.json', JSON.stringify({images}, null, 2));"
+
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore(data): update TDoR reports/photos'
