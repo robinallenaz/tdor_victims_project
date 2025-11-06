@@ -21,6 +21,10 @@ on:
         description: Text filter (optional)
         required: false
         default: ''
+      category:
+        description: Category filter (optional)
+        required: false
+        default: ''
 
 jobs:
   fetch:
@@ -35,19 +39,38 @@ jobs:
           TO: ${{ github.event.inputs.to || '2024-12-31' }}
           COUNTRY: ${{ github.event.inputs.country || '' }}
           FILTER: ${{ github.event.inputs.filter || '' }}
+          CATEGORY: ${{ github.event.inputs.category || '' }}
         run: |
           set -euo pipefail
           : "${API_KEY:?Missing TDOR_API_KEY repo secret}"
           mkdir -p data
-          URL="https://tdor.translivesmatter.info/api/v1/reports?key=${API_KEY}&from=${FROM}&to=${TO}&country=${COUNTRY}&filter=${FILTER}"
-          echo "Fetching: $URL"
-          HTTP_STATUS=$(curl -sS -H "Accept: application/json" -w "%{http_code}" -o data/reports.json "$URL" || echo "000")
+          URL="https://tdor.translivesmatter.info/api/v1/reports?key=${API_KEY}&from=${FROM}&to=${TO}&country=${COUNTRY}&filter=${FILTER}&category=${CATEGORY}"
+          SAFE_URL="${URL/${API_KEY}/***}"
+          echo "Fetching: $SAFE_URL"
+          HTTP_STATUS=$(curl -sSL --retry 3 --retry-all-errors --retry-delay 2 \
+            -H "Accept: application/json" -H "User-Agent: TDORCollage/1.0 (GitHub Actions)" \
+            -D data/headers.txt -w "%{http_code}" -o data/reports.json "$URL" || echo "000")
           if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
             echo "Fetch failed with HTTP status $HTTP_STATUS" >&2
             head -c 400 data/reports.json || true
             exit 1
           fi
-          echo "Saved data/reports.json ($(wc -c < data/reports.json) bytes)"
+          echo "HTTP $HTTP_STATUS — saved data/reports.json ($(wc -c < data/reports.json) bytes)"
+          echo "Response headers (first lines):"; head -n 10 data/headers.txt || true
+
+      - name: Inspect schema (debug)
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const raw = fs.readFileSync('data/reports.json','utf8');
+          let data; try { data = JSON.parse(raw); } catch(e){ console.error('JSON parse failed:', e.message); console.log(raw.slice(0,500)); process.exit(1); }
+          const arr = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.reports) ? data.reports : []));
+          console.log('Array length:', arr.length);
+          if (arr[0]) {
+            console.log('First keys:', Object.keys(arr[0]).slice(0,50));
+            console.log('Sample item:', JSON.stringify(arr[0], null, 2).slice(0, 800));
+          }
+          NODE
 
       - name: Derive photos.json
         run: |
@@ -62,7 +85,7 @@ jobs:
             console.error(raw.slice(0, 500));
             process.exit(1);
           }
-          const arr = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+          const arr = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.reports) ? data.reports : []));
           const fields = ['image_url','photo','image','photo_url','imageUrl','imageURL','photos','thumb_url','thumbnail'];
           const images = [];
           for (const r of arr) {
