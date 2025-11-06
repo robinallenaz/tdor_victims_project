@@ -4,6 +4,23 @@ on:
   schedule:
     - cron: '0 6 * * *'  # daily at 06:00 UTC
   workflow_dispatch:
+    inputs:
+      from:
+        description: From date (YYYY-MM-DD)
+        required: false
+        default: '2024-01-01'
+      to:
+        description: To date (YYYY-MM-DD)
+        required: false
+        default: '2024-12-31'
+      country:
+        description: Country filter (optional)
+        required: false
+        default: ''
+      filter:
+        description: Text filter (optional)
+        required: false
+        default: ''
 
 jobs:
   fetch:
@@ -14,18 +31,56 @@ jobs:
       - name: Fetch reports JSON
         env:
           API_KEY: ${{ secrets.TDOR_API_KEY }}
-          FROM: '2024-01-01'
-          TO: '2024-12-31'
-          COUNTRY: ''
-          FILTER: ''
+          FROM: ${{ github.event.inputs.from || '2024-01-01' }}
+          TO: ${{ github.event.inputs.to || '2024-12-31' }}
+          COUNTRY: ${{ github.event.inputs.country || '' }}
+          FILTER: ${{ github.event.inputs.filter || '' }}
         run: |
+          set -euo pipefail
+          : "${API_KEY:?Missing TDOR_API_KEY repo secret}"
           mkdir -p data
-          curl -sS "https://tdor.translivesmatter.info/api/v1/reports?key=${API_KEY}&from=${FROM}&to=${TO}&country=${COUNTRY}&filter=${FILTER}" -o data/reports.json
+          URL="https://tdor.translivesmatter.info/api/v1/reports?key=${API_KEY}&from=${FROM}&to=${TO}&country=${COUNTRY}&filter=${FILTER}"
+          echo "Fetching: $URL"
+          HTTP_STATUS=$(curl -sS -H "Accept: application/json" -w "%{http_code}" -o data/reports.json "$URL" || echo "000")
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+            echo "Fetch failed with HTTP status $HTTP_STATUS" >&2
+            head -c 400 data/reports.json || true
+            exit 1
+          fi
+          echo "Saved data/reports.json ($(wc -c < data/reports.json) bytes)"
 
       - name: Derive photos.json
         run: |
-          node -e "const fs=require('fs'); const p='data/reports.json'; const d=JSON.parse(fs.readFileSync(p,'utf8')); const arr=Array.isArray(d)?d:[]; const images=[...new Set(arr.map(r=>r.image_url||r.photo||r.image).filter(Boolean))]; fs.writeFileSync('data/photos.json', JSON.stringify({images}, null, 2));"
+          node - <<'NODE'
+          const fs = require('fs');
+          const p = 'data/reports.json';
+          const raw = fs.readFileSync(p, 'utf8');
+          let data;
+          try { data = JSON.parse(raw); }
+          catch (e) {
+            console.error('Invalid JSON from reports endpoint:', e.message);
+            console.error(raw.slice(0, 500));
+            process.exit(1);
+          }
+          const arr = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+          const fields = ['image_url','photo','image','photo_url','imageUrl','imageURL','photos','thumb_url','thumbnail'];
+          const images = [];
+          for (const r of arr) {
+            for (const f of fields) {
+              const v = r && r[f];
+              if (typeof v === 'string') images.push(v);
+              else if (Array.isArray(v)) images.push(...v.filter(x => typeof x === 'string'));
+            }
+          }
+          const uniq = [...new Set(images)].filter(Boolean);
+          if (!uniq.length) {
+            console.warn('No image fields found. Update field list in workflow if schema differs.');
+          }
+          fs.writeFileSync('data/photos.json', JSON.stringify({ images: uniq }, null, 2));
+          console.log(`Wrote ${uniq.length} images to data/photos.json`);
+          NODE
 
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'chore(data): update TDoR reports/photos'
+          file_pattern: data/*.json
