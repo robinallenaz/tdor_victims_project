@@ -33,17 +33,13 @@
     // Continuous vertical loop animation
     let offset = 0;            // current translateY
     let speed = 40;            // px per second
-    let paused = false;
     let last = performance.now();
-
-    loop.addEventListener('mouseenter', () => { paused = true; });
-    loop.addEventListener('mouseleave', () => { paused = false; });
 
     function step(now) {
       const dt = (now - last) / 1000;
       last = now;
       const gridHeight = grid.getBoundingClientRect().height + 12; // include gap
-      if (!paused && gridHeight > 0) {
+      if (gridHeight > 0) {
         offset -= speed * dt;
         if (-offset >= gridHeight) {
           // When first grid has fully scrolled out, wrap offset by one grid height
