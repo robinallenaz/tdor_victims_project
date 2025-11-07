@@ -10,7 +10,12 @@
   <header class="header">
     <img src="TDOR_flyer.png" alt="Transgender Day of Remembrance flyer" class="flyer" />
   </header>
-  <main id="grid" class="grid" aria-live="polite"></main>
+  <main class="loop" id="loop" aria-label="Photo collage auto-scroll region">
+    <div id="track">
+      <div class="grid" id="grid" aria-live="polite"></div>
+      <div class="grid" id="gridClone" aria-hidden="true"></div>
+    </div>
+  </main>
   <footer class="footer">
     <p>Collage imagery and data are sourced from the TDoR API at <a href="https://tdor.translivesmatter.info" target="_blank" rel="noopener">translivesmatter.info</a>.</p>
   </footer>
