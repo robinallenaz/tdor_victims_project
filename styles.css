@@ -45,3 +45,11 @@ body{
   font-size:.95rem;
   color:#cfcfcf;
 }
+
+/* Make the collage multi‑column on small screens */
+@media (max-width: 768px) {
+  :root { --cell: clamp(140px, 28vw, 240px); }
+}
+@media (max-width: 480px) {
+  :root { --cell: clamp(100px, 32vw, 160px); --gap: 8px; }
+}
