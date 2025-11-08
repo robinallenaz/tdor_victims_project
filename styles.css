@@ -8,14 +8,15 @@
 html,body{height:100%}
 body{
   margin:0;
-  background: radial-gradient(1200px 800px at 50% -10%, #1b1b1b, #000 60%);
+  background:#000;
   color:var(--fg);
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
 }
-.header{padding:12px 12px 0}
+.header{padding:0}
 .flyer{max-width:420px;width:100%;height:auto;display:block;margin:12px auto 8px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.hero-video{width:min(1100px,98vw);max-height:42vh;display:block;margin:8px auto var(--gap);border-radius:0;box-shadow:none;object-fit:cover;background:#000}
 .loop{position:relative; height:72vh; overflow:hidden}
 #track{display:flex; flex-direction:column; will-change:transform}
 .grid{
