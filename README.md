@@ -1,7 +1,5 @@
 # TDoR Victims Project
 
-![TDoR Flyer](TDOR_flyer.png)
-
 Assets and data for a Transgender Day of Remembrance (TDoR) event utilizing data from https://tdor.translivesmatter.info/.
 
 ## What's here
