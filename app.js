@@ -54,4 +54,32 @@
     console.error('Failed to load photos.json', err);
     grid.innerHTML = '<p style="padding:12px;text-align:center">Unable to load collage images.</p>';
   }
+
+  // Background audio: best-effort autoplay with graceful fallback
+  const bgAudio = document.getElementById('bg-audio');
+  if (bgAudio) {
+    bgAudio.loop = true;
+    const tryPlay = () => {
+      const p = bgAudio.play();
+      if (p && typeof p.then === 'function') {
+        p.then(() => {
+          window.removeEventListener('pointerdown', onFirstInteraction);
+          window.removeEventListener('keydown', onFirstInteraction);
+        }).catch(() => {
+          // Ignore autoplay errors; we'll start on user interaction.
+        });
+      }
+    };
+
+    const onFirstInteraction = () => {
+      tryPlay();
+    };
+
+    window.addEventListener('pointerdown', onFirstInteraction, { once: true });
+    window.addEventListener('keydown', onFirstInteraction, { once: true });
+
+    // Attempt autoplay immediately (may be blocked in some browsers).
+    tryPlay();
+  }
+
 })();
