@@ -25,8 +25,3 @@ Assets and data for a Transgender Day of Remembrance (TDoR) event utilizing data
   ```
 - Deploy: GitHub → Settings → Pages → Build and deployment → Branch: `main` (Folder: `/`).
 - The collage auto-scrolls infinitely. Adjust speed in `app.js` if desired.
-
-## Notes
-
-- Respectful use only; center remembrance and dignity.
-- Data courtesy of translivesmatter.info — follow their attribution/licensing guidance.
