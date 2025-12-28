@@ -6,6 +6,7 @@
   const gridClone = document.getElementById('gridClone');
   const track = document.getElementById('track');
   const loop = document.getElementById('loop');
+  const soundToggle = document.getElementById('sound-toggle');
 
   function makeImage(src) {
     const img = new Image();
@@ -59,27 +60,96 @@
   const bgAudio = document.getElementById('bg-audio');
   if (bgAudio) {
     bgAudio.loop = true;
-    const tryPlay = () => {
-      const p = bgAudio.play();
-      if (p && typeof p.then === 'function') {
-        p.then(() => {
-          window.removeEventListener('pointerdown', onFirstInteraction);
-          window.removeEventListener('keydown', onFirstInteraction);
-        }).catch(() => {
-          // Ignore autoplay errors; we'll start on user interaction.
-        });
+    const storageKey = 'tdor_sound_enabled';
+
+    const setToggleUi = (state) => {
+      if (!soundToggle) return;
+      if (state === 'on') {
+        soundToggle.setAttribute('aria-pressed', 'true');
+        soundToggle.textContent = 'Sound: On';
+        return;
+      }
+      soundToggle.setAttribute('aria-pressed', 'false');
+      soundToggle.textContent =
+        state === 'starting'
+          ? 'Sound: Starting…'
+          : state === 'blocked'
+            ? 'Tap to start sound'
+            : 'Sound: Off';
+    };
+
+    const readPref = () => {
+      try {
+        return localStorage.getItem(storageKey) === 'true';
+      } catch {
+        return false;
       }
     };
 
-    const onFirstInteraction = () => {
-      tryPlay();
+    const writePref = (enabled) => {
+      try {
+        localStorage.setItem(storageKey, enabled ? 'true' : 'false');
+      } catch {
+        // ignore
+      }
     };
 
-    window.addEventListener('pointerdown', onFirstInteraction, { once: true });
-    window.addEventListener('keydown', onFirstInteraction, { once: true });
+    let intentEnabled = readPref();
+    let playing = false;
 
-    // Attempt autoplay immediately (may be blocked in some browsers).
-    tryPlay();
+    const stopPlayback = () => {
+      intentEnabled = false;
+      playing = false;
+      writePref(false);
+      bgAudio.pause();
+      bgAudio.muted = true;
+      setToggleUi('off');
+    };
+
+    const startPlayback = async () => {
+      if (!intentEnabled) return;
+      setToggleUi('starting');
+      bgAudio.muted = false;
+      try {
+        await bgAudio.play();
+        playing = true;
+        setToggleUi('on');
+        window.removeEventListener('pointerdown', onUserGesture);
+        window.removeEventListener('keydown', onUserGesture);
+      } catch {
+        playing = false;
+        setToggleUi('blocked');
+      }
+    };
+
+    const onUserGesture = () => {
+      if (intentEnabled && !playing) startPlayback();
+    };
+
+    // Default for first-time visitors: sound off (muted). If the user previously enabled
+    // sound, attempt to start immediately, and retry on the next user gesture if blocked.
+    bgAudio.muted = true;
+    if (intentEnabled) {
+      window.addEventListener('pointerdown', onUserGesture);
+      window.addEventListener('keydown', onUserGesture);
+      startPlayback();
+    } else {
+      setToggleUi('off');
+    }
+
+    if (soundToggle) {
+      soundToggle.addEventListener('click', () => {
+        if (intentEnabled) {
+          stopPlayback();
+          return;
+        }
+        intentEnabled = true;
+        writePref(true);
+        window.addEventListener('pointerdown', onUserGesture);
+        window.addEventListener('keydown', onUserGesture);
+        startPlayback();
+      });
+    }
   }
 
 })();

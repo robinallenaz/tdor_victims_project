@@ -46,6 +46,28 @@ body{
   color:#cfcfcf;
 }
 
+.sound-toggle{
+  position:fixed;
+  top:12px;
+  right:12px;
+  z-index:20;
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(0,0,0,.35);
+  color:var(--fg);
+  font:inherit;
+  font-size:.85rem;
+  line-height:1;
+  cursor:pointer;
+  opacity:.65;
+  transition:opacity .15s ease, transform .15s ease, background-color .15s ease;
+  backdrop-filter:blur(6px);
+}
+.sound-toggle:hover{opacity:.95; background:rgba(0,0,0,.55)}
+.sound-toggle:active{transform:translateY(1px)}
+.sound-toggle:focus-visible{outline:2px solid rgba(255,255,255,.65); outline-offset:2px}
+
 /* Make the collage multi‑column on small screens */
 @media (max-width: 768px) {
   :root { --cell: clamp(140px, 28vw, 240px); }
