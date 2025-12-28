@@ -8,12 +8,20 @@
   const loop = document.getElementById('loop');
   const soundToggle = document.getElementById('sound-toggle');
 
-  function makeImage(src) {
+  const motionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+  let reduceMotion = Boolean(motionQuery?.matches);
+
+  function makeImage(entry, scheduleHeightUpdate) {
     const img = new Image();
     img.loading = 'lazy';
     img.decoding = 'async';
-    img.src = src.startsWith('http') ? src : `photos/${src}`;
-    img.alt = '';
+    const src = typeof entry === 'string' ? entry : entry?.src;
+    img.src = String(src || '').startsWith('http') ? src : `photos/${src}`;
+    img.alt = typeof entry === 'object' && entry && typeof entry.alt === 'string' ? entry.alt : '';
+    if (scheduleHeightUpdate) {
+      img.addEventListener('load', scheduleHeightUpdate, { once: true });
+      img.addEventListener('error', scheduleHeightUpdate, { once: true });
+    }
     return img;
   }
 
@@ -24,22 +32,48 @@
     const images = Array.isArray(data?.images) ? data.images : [];
     const fragA = document.createDocumentFragment();
     const fragB = document.createDocumentFragment();
-    images.forEach(src => {
-      fragA.appendChild(makeImage(src));
-      fragB.appendChild(makeImage(src));
+
+    const computed = window.getComputedStyle(grid);
+    const gap = Number.parseFloat(computed.rowGap || computed.gap) || 12;
+    let gridHeight = 0;
+    let heightUpdatePending = false;
+    const updateGridHeight = () => {
+      gridHeight = grid.offsetHeight + gap;
+    };
+    const scheduleHeightUpdate = () => {
+      if (heightUpdatePending) return;
+      heightUpdatePending = true;
+      requestAnimationFrame(() => {
+        heightUpdatePending = false;
+        updateGridHeight();
+      });
+    };
+
+    images.forEach(entry => {
+      fragA.appendChild(makeImage(entry, scheduleHeightUpdate));
+      fragB.appendChild(makeImage(entry, scheduleHeightUpdate));
     });
     grid.appendChild(fragA);
     gridClone.appendChild(fragB);
+
+    scheduleHeightUpdate();
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => scheduleHeightUpdate());
+      ro.observe(grid);
+    } else {
+      window.addEventListener('resize', scheduleHeightUpdate);
+    }
 
     // Continuous vertical loop animation
     let offset = 0;            // current translateY
     let speed = 40;            // px per second
     let last = performance.now();
 
+    let rafId = 0;
+
     function step(now) {
       const dt = (now - last) / 1000;
       last = now;
-      const gridHeight = grid.getBoundingClientRect().height + 12; // include gap
       if (gridHeight > 0) {
         offset -= speed * dt;
         if (-offset >= gridHeight) {
@@ -48,9 +82,34 @@
         }
         track.style.transform = `translateY(${offset}px)`;
       }
-      requestAnimationFrame(step);
+      rafId = requestAnimationFrame(step);
     }
-    requestAnimationFrame(step);
+
+    const stopAnimation = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = 0;
+      offset = 0;
+      track.style.transform = 'translateY(0px)';
+    };
+
+    const startAnimation = () => {
+      if (rafId) return;
+      last = performance.now();
+      rafId = requestAnimationFrame(step);
+    };
+
+    if (reduceMotion) stopAnimation();
+    else startAnimation();
+
+    if (motionQuery) {
+      const onMotionChange = (e) => {
+        reduceMotion = Boolean(e.matches);
+        if (reduceMotion) stopAnimation();
+        else startAnimation();
+      };
+      if (typeof motionQuery.addEventListener === 'function') motionQuery.addEventListener('change', onMotionChange);
+      else if (typeof motionQuery.addListener === 'function') motionQuery.addListener(onMotionChange);
+    }
   } catch (err) {
     console.error('Failed to load photos.json', err);
     grid.innerHTML = '<p style="padding:12px;text-align:center">Unable to load collage images.</p>';
