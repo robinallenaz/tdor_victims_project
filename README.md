@@ -9,10 +9,42 @@ Assets and data for a Transgender Day of Remembrance (TDoR) event utilizing data
 - **scripts/build-photos-json.mjs** — generates `data/photos.json` from `photos/`
 - **assets/vigil-candles.mp4** — optional hero video shown at the top
 - **index.html / styles.css / app.js** — static site (infinite looping collage)
-- **tdor_export.csv** — offline data export
+- **tdor_export_*/** — offline data export
 - **tdor_names.txt** — one name per line for reading aloud
 
-## GitHub Pages collage (quick start)
+## Run locally (quick start)
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start a local server (no live reload):
+
+```bash
+npm start
+```
+
+Start a dev server (live reload):
+
+```bash
+npm run dev
+```
+
+Both run on:
+
+- `http://localhost:8080`
+
+The photo manifest is regenerated automatically before `start`/`dev`.
+
+### Generate the photo manifest manually
+
+```bash
+npm run build:photos
+```
+
+## GitHub Pages collage
 
 - The repo includes: `index.html`, `styles.css`, `app.js`, and `data/photos.json`. The hero video is `assets/vigil-candles.mp4` (optional).
 - Put images in `photos/`. Generate the manifest:
@@ -21,7 +53,12 @@ Assets and data for a Transgender Day of Remembrance (TDoR) event utilizing data
   ```
 - Preview locally:
   ```bash
-  npx serve .
+  npm start
   ```
 - Deploy: GitHub → Settings → Pages → Build and deployment → Branch: `main` (Folder: `/`).
 - The collage auto-scrolls infinitely. Adjust speed in `app.js` if desired.
+
+## Troubleshooting
+
+- If `fetch(data/photos.json)` fails when opening `index.html` directly, run the site through a local server (`npm start` / `npm run dev`) instead of using a `file://` path.
+- If port `8080` is already in use, stop the other process using it or tell me and I can switch the scripts to a different port.
